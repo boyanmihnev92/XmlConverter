@@ -1,0 +1,103 @@
+﻿@using XmlConverter.UI.Components.ModalWindowService
+@using XmlConverter.UI.Components.ToolTipService
+@using XmlConverter.UI.Infrastructure.Enums
+<RadzenButton MouseEnter="OnMouseOver"
+			  MouseLeave="OnMouseLeave"
+			  Text="ButtonText">
+	<label style="cursor:pointer;">
+		<InputFile OnChange="OnInputFileChange" accept="@GetAcceptAttribute(AllowedFileType)" style="display:none;" />
+		<svg xmlns="http://www.w3.org/2000/svg"
+			 width="19.394"
+			 height="19.394"
+			 viewBox="0 0 19.394 19.394">
+			<path id="upload"
+				  d="M4.644,5.866,9.091,1.947V13.93a.606.606,0,0,0,1.212,0V1.947L14.75,5.9a.587.587,0,0,0,.4.154.606.606,0,0,0,.4-1.059L10.1.144a.6.6,0,0,0-.8,0L3.84,4.993a.606.606,0,0,0-.052.854A.579.579,0,0,0,4.644,5.866ZM16.97,12.112H12.727a.606.606,0,1,0,0,1.212H16.97a1.212,1.212,0,0,1,1.212,1.212v2.424a1.212,1.212,0,0,1-1.212,1.212H2.424a1.212,1.212,0,0,1-1.212-1.212V14.536a1.212,1.212,0,0,1,1.212-1.212H6.667a.606.606,0,1,0,0-1.212H2.424A2.424,2.424,0,0,0,0,14.536v2.424a2.424,2.424,0,0,0,2.424,2.424H16.97a2.424,2.424,0,0,0,2.424-2.424V14.536A2.426,2.426,0,0,0,16.97,12.112Zm-.3,3.636a.909.909,0,1,0-.909.909A.909.909,0,0,0,16.667,15.748Z"
+				  transform="translate(0 0.009)"
+				  fill="#011638" />
+		</svg>
+		@ButtonText
+	</label>
+</RadzenButton>
+
+@code {
+
+	[Inject] public IModalWindowService? ModalWindowService { get; set; }
+
+	[Inject] public IToolTipService? TooltipService { get; set; }
+
+	[Parameter, EditorRequired] public EventCallback<IBrowserFile> OnFileSelected { get; set; }
+
+	[Parameter, EditorRequired] public AllowedFileTypes AllowedFileType { get; set; }
+
+	[Parameter, EditorRequired] public AllowedFileSizes AllowedFileSize { get; set; }
+
+	[Parameter] public string? ButtonText { get; set; }
+
+	[Parameter] public string? TooltipText { get; set; }
+
+	private async Task OnInputFileChange(InputFileChangeEventArgs e)
+	{
+		var file = e.File;
+		if (file == null)
+		{
+			await ModalWindowService!.Alert(@"Please upload a valid file!");
+			return;
+		}
+		var allowedFileSize = (long)AllowedFileSize;
+		if (file.Size > allowedFileSize)
+		{
+			var allowedSizeFormatted = FormatSizeInMb(allowedFileSize);
+			await ModalWindowService!.Alert($@"File too big! Allowed maximum file size {allowedSizeFormatted}");
+			return;
+		}
+		if (!IsValidFileType(file.Name))
+		{
+			await ModalWindowService!.Alert($@"File type not supported! Please upload file with type {string.Join("; ", GetAllowedExtensions(AllowedFileType))}");
+			return;
+		}
+
+		await OnFileSelected.InvokeAsync(file);
+	}
+
+	private bool IsValidFileType(string fileName)
+	{
+		var allowedExtensions = GetAllowedExtensions(AllowedFileType);
+		var fileExtension = Path.GetExtension(fileName);
+
+		return allowedExtensions.Any(v => v.Equals(fileExtension, StringComparison.OrdinalIgnoreCase));
+	}
+
+	private string[] GetAllowedExtensions(AllowedFileTypes fileType)
+	{
+		return fileType switch
+		{
+			AllowedFileTypes.Xml => new[] { ".xml" },
+			_ => Array.Empty<string>()
+		};
+	}
+
+	private string GetAcceptAttribute(AllowedFileTypes fileType)
+	{
+		return fileType switch
+		{
+			AllowedFileTypes.Xml => ".xml",
+			_ => string.Empty
+		};
+	}
+
+	private string FormatSizeInMb(long fileSizeInBytes)
+	{
+		var sizeInMB = fileSizeInBytes / (1024.0 * 1024.0);
+		return $"{sizeInMB:0.##} MB";
+	}
+
+	private void OnMouseOver(ElementReference elementReference)
+	{
+		TooltipService?.ShowTooltip(elementReference, TooltipText ?? "Import");
+	}
+
+	private void OnMouseLeave(ElementReference elementReference)
+	{
+		TooltipService?.HideTooltip();
+	}
+}

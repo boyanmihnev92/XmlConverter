@@ -1,0 +1,25 @@
+﻿<RadzenButton Click="OnButtonClick"
+			  Visible="Visible"
+			  Disabled="@DisableButton"
+			  IsBusy="@IsBusy">
+	@ButtonTitle
+</RadzenButton>
+
+@code {
+	[Parameter]
+	public string ButtonTitle { get; set; } = "Edit";
+
+	[Parameter] public EventCallback<MouseEventArgs> OnButtonClickEvent { get; set; }
+
+	[Parameter] public bool DisableButton { get; set; }
+
+	[Parameter] public bool IsBusy { get; set; }
+
+	[Parameter]
+	public bool Visible { get; set; } = true;
+
+	public async Task OnButtonClick(MouseEventArgs args)
+	{
+		await OnButtonClickEvent.InvokeAsync(args);
+	}
+}

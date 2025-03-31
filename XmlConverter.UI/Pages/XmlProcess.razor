@@ -1,0 +1,53 @@
+﻿@page "/xmlProcess"
+@using Refit
+@using XmlConverter.UI.Components
+@using XmlConverter.UI.Components.ModalWindowService
+@using XmlConverter.UI.Infrastructure.Enums
+@using XmlConverter.UI.Infrastructure.Models
+@using XmlConverter.UI.Infrastructure.Models.Requests
+@using XmlConverter.UI.Infrastructure.Models.Responses
+@using XmlConverter.UI.Infrastructure.Refit.APIs
+@using XmlConverter.UI.Extensions
+
+<PageTitle>Process XML file</PageTitle>
+
+<FileImportButton AllowedFileSize="_allowedFileSize"
+				  AllowedFileType="_allowedFileType"
+				  ButtonText="Process XML"
+				  OnFileSelected="ImportXml"
+				  TooltipText="XML file will be converted to a JSON file">
+</FileImportButton>
+
+@code {
+	private readonly AllowedFileSizes _allowedFileSize = AllowedFileSizes.Large;
+	private readonly AllowedFileTypes _allowedFileType = AllowedFileTypes.Xml;
+
+	[Inject] private IXmlConvertApi? XmlConvertApi { get; set; }
+
+	[Inject] private IModalWindowService? ModalWindowService { get; set; }
+
+	[Inject] private IJSRuntime? JSRuntime { get; set; }
+
+	private async Task ImportXml(IBrowserFile file)
+	{
+		var fileData = await FileHelper.GetFileData(file, this._allowedFileSize);
+		var request = new FileUploadRequest(fileData, file.Name);
+		var apiResponse = await XmlConvertApi!.ConvertXmlToJson(request);
+		var isValid = await apiResponse.IsValid(ModalWindowService!);
+		if (!isValid)
+		{
+			await InvokeAsync(StateHasChanged);
+			return;
+		}
+
+		var apiResponseData = apiResponse?.Content?.Data;
+		await ModalWindowService!.Alert("Successfully processed XML file");
+		await FileHelper.DownloadFile(
+				apiResponseData?.FileContent!,
+				apiResponseData?.FileName!,
+				apiResponseData?.ContentType!,
+				JSRuntime!);
+
+		await InvokeAsync(StateHasChanged);
+	}
+}

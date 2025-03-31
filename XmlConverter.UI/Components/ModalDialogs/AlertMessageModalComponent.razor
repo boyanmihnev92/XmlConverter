@@ -1,0 +1,24 @@
+﻿@using XmlConverter.UI.Components.Buttons
+@using XmlConverter.UI.Components.ModalWindowService
+@inject IModalWindowService ModalService
+
+@Title
+@Message
+<div class="rz-dialog-alert-buttons">
+    <OkButton ButtonTitle="OK" OnButtonClickEvent="Close"></OkButton>
+</div>
+
+
+
+@code {
+    [Parameter]
+    public string? Message { get; set; }
+
+    [Parameter]
+    public string? Title { get; set; }
+
+    void Close()
+    {
+        ModalService.Close();
+    }
+}
